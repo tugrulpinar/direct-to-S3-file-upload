@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Conventional File Upload</title>
+</head>
+
+<body>
+
+    <form action="{% url 'conventional_uploader' %}" method="post" enctype="multipart/form-data" id="form">
+        {% csrf_token %}
+        <input type="file" name="file" id="file-input" required>
+        <button type="submit" id="upload-btn">
+            Upload
+        </button>
+    </form>
+    <br>
+    {% if image_urls %}
+        {% for image_url in image_urls %}
+            <img src="{{ image_url }}" alt="">
+        {% endfor %}
+    {% endif %}
+
+</body>
+</html>

@@ -1,0 +1,32 @@
+services:
+  web:
+    build: .
+    command: python /app/manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - 8000:8000
+    depends_on:
+      - postgres
+    env_file:
+      - .env
+    container_name: web
+
+  postgres:
+    image: postgres:15.6
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - "POSTGRES_HOST_AUTH_METHOD=trust"
+    container_name: postgres
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    restart: always
+    ports:
+      - 8025:8025
+    container_name: mailhog
+
+  
+volumes:
+  postgres_data:

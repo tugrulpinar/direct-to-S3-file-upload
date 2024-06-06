@@ -1,0 +1,118 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  image-moderation
+
+  Sample SAM Template for image-moderation
+
+Globals:
+  Function:
+    Timeout: 10
+    LoggingConfig:
+      LogFormat: JSON
+      ApplicationLogLevel: INFO
+
+Resources:
+  FileUploadBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: <your-unique-bucket-name>
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: ['GET', 'PUT', 'POST', 'DELETE']
+            AllowedOrigins: ['*']
+            ExposedHeaders: []
+
+  ImageModerationFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: LambdaPermissionsPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:DeleteObject
+                  - sns:Publish
+                Resource:
+                  - "arn:aws:s3:::<your-unique-bucket-name>/*"
+                  - !Ref ModerationNotification
+              - Effect: Allow
+                Action:
+                  - rekognition:DetectModerationLabels
+                Resource: "*"
+
+  ImageModerationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: ImageModerationFunction
+      CodeUri: moderation/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - x86_64
+      Events:
+        S3Event:
+          Type: S3
+          Properties:
+            Bucket: 
+              Ref: FileUploadBucket
+            Events: s3:ObjectCreated:*
+      Environment:
+        Variables:
+          MODERATION_NOTIFICATION_TOPIC_ARN: !Ref ModerationNotification
+      Role: !GetAtt ImageModerationFunctionRole.Arn
+
+  ModerationNotification:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Ref ModerationNotificationTopic
+      Subscription:
+        - Protocol: HTTPS 
+          Endpoint: !Ref ModerationNotificationEndpoint
+
+  ApplicationResourceGroup:
+    Type: AWS::ResourceGroups::Group
+    Properties:
+      Name:
+        Fn::Sub: ApplicationInsights-SAM-${AWS::StackName}
+      ResourceQuery:
+        Type: CLOUDFORMATION_STACK_1_0
+  ApplicationInsightsMonitoring:
+    Type: AWS::ApplicationInsights::Application
+    Properties:
+      ResourceGroupName:
+        Ref: ApplicationResourceGroup
+      AutoConfigurationEnabled: 'true'
+
+Parameters:
+  ModerationNotificationTopic:
+    Type: String
+  ModerationNotificationEndpoint:
+    Type: String
+
+Outputs:
+  ImageModerationFunction:
+    Description: ImageModerationFunction Lambda Function ARN
+    Value: !GetAtt ImageModerationFunction.Arn
+  ImageModerationFunctionIamRole:
+    Description: IAM Role created for ImageModerationFunction function
+    Value: !GetAtt ImageModerationFunctionRole.Arn
+  FileUploadBucketArn:
+    Description: File Upload Bucket ARN
+    Value: !GetAtt FileUploadBucket.Arn
+  ModerationNotificationArn:
+    Description: SNS Notification ARN
+    Value: !Ref ModerationNotification

@@ -1,0 +1,15 @@
+name: CI
+
+on:
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+      - uses: aws-actions/setup-sam@v2
+      - run: sam validate -t image-moderation/template.yaml
+      - run: pip install -r image-moderation/moderation/requirements.txt
+      - run: pytest ./image-moderation
