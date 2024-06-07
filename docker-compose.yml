@@ -19,14 +19,6 @@ services:
     environment:
       - "POSTGRES_HOST_AUTH_METHOD=trust"
     container_name: postgres
-
-  mailhog:
-    image: mailhog/mailhog:latest
-    restart: always
-    ports:
-      - 8025:8025
-    container_name: mailhog
-
   
 volumes:
   postgres_data:
