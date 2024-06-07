@@ -1,4 +1,4 @@
-name: CI
+name: SAM Verification
 
 on:
   pull_request:
